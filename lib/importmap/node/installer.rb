@@ -135,7 +135,7 @@ module Importmap
         end
       end
 
-      def pin_importmap(pkg_name, js_files) # rubocop:disable Metrics/MethodLength
+      def pin_importmap(pkg_name, js_files)
         return if js_files.empty? || !@importmap.exist?
 
         content  = @importmap.read
