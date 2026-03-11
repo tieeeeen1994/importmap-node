@@ -17,9 +17,8 @@ module Importmap
       end
 
       def install(package)
-        yarn_add(package)
-
-        pkg_name = resolve_package_name(package)
+        resolved_name = yarn_add(package)
+        pkg_name = resolved_name || resolve_package_name(package)
         pkg_meta = read_package_meta(pkg_name)
         js_files = vendor_js(pkg_name, pkg_meta)
         pin_importmap(pkg_name, js_files)
@@ -55,17 +54,26 @@ module Importmap
       private
 
       def yarn_add(package)
-        yarn_arg = if package.start_with?('file:')
-                     path = package.sub(/^file:/, '')
-                     local_pkg_json = File.expand_path(File.join(path, 'package.json'), @root.to_s)
-                     name = JSON.parse(File.read(local_pkg_json))['name']
-                     "#{name}@#{package}"
-                   else
-                     package
-                   end
+        return yarn_add_repo(package) if repo_url?(package)
 
+        yarn_arg = package.start_with?('file:') ? file_package_arg(package) : package
         puts "Running: yarn add #{yarn_arg}"
         system("yarn add #{yarn_arg}", chdir: @root.to_s) or raise "yarn add failed for #{package}"
+        nil
+      end
+
+      def yarn_add_repo(package)
+        deps_before = current_dependencies.keys
+        puts "Running: yarn add #{package}"
+        system("yarn add #{package}", chdir: @root.to_s) or raise "yarn add failed for #{package}"
+        new_keys = current_dependencies.keys - deps_before
+        raise "Could not determine package name after yarn add #{package}" if new_keys.empty?
+
+        new_keys.first
+      end
+
+      def file_package_arg(package)
+        "#{local_package_name(package)}@#{package}"
       end
 
       def yarn_remove(pkg_name)
@@ -82,6 +90,20 @@ module Importmap
         system("yarn up #{deps.join(' ')}", chdir: @root.to_s) or raise 'yarn up failed'
       end
 
+      def repo_url?(package)
+        return false if package.start_with?('file:')
+
+        package.match?(%r{\Ahttps?://|\Agit[+:]|\Agithub:|\Abitbucket:|\Agitlab:}) ||
+          (!package.start_with?('@') && package.include?('/'))
+      end
+
+      def current_dependencies
+        pkg_json = @root.join('package.json')
+        return {} unless pkg_json.exist?
+
+        JSON.parse(pkg_json.read).fetch('dependencies', {})
+      end
+
       def revendor(package)
         pkg_name = resolve_package_name(package)
         pkg_meta = read_package_meta(pkg_name)
@@ -91,13 +113,22 @@ module Importmap
       end
 
       def resolve_package_name(package)
-        if package.start_with?('file:')
-          path = package.sub(/^file:/, '')
-          local_pkg_json = File.expand_path(File.join(path, 'package.json'), @root.to_s)
-          JSON.parse(File.read(local_pkg_json))['name']
-        else
-          package
-        end
+        return local_package_name(package) if package.start_with?('file:')
+        return repo_package_name(package) if repo_url?(package)
+
+        package
+      end
+
+      def local_package_name(package)
+        path = package.sub(/^file:/, '')
+        local_pkg_json = File.expand_path(File.join(path, 'package.json'), @root.to_s)
+        JSON.parse(File.read(local_pkg_json))['name']
+      end
+
+      def repo_package_name(package)
+        deps = current_dependencies
+        match = deps.find { |_name, spec| spec == package || spec.include?(package) || package.include?(spec) }
+        match ? match.first : package
       end
 
       def read_package_meta(pkg_name)
@@ -138,12 +169,14 @@ module Importmap
       def pin_importmap(pkg_name, js_files)
         return if js_files.empty? || !@importmap.exist?
 
-        content  = @importmap.read
         pin_line = "pin \"#{pkg_name}\", to: \"#{js_files.first}\""
+        write_pin(pkg_name, pin_line)
+      end
 
-        if content.match?(/pin ['"]#{Regexp.escape(pkg_name)}['"]/)
-          new_content = content.gsub(/pin ['"]#{Regexp.escape(pkg_name)}['"][^\n]*/, pin_line)
-          @importmap.write(new_content)
+      def write_pin(pkg_name, pin_line)
+        content = @importmap.read
+        if content.match?(/pin ['"]{1}#{Regexp.escape(pkg_name)}['"]{1}/)
+          @importmap.write(content.gsub(/pin ['"]{1}#{Regexp.escape(pkg_name)}['"]{1}[^\n]*/, pin_line))
           puts "  Updated pin: #{pin_line}"
         else
           @importmap.open('a') { |f| f.puts pin_line }
