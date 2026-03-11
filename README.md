@@ -46,21 +46,10 @@ This will:
 You can install packages directly from GitHub or any Git URL:
 
 ```sh
-# GitHub shorthand (user/repo)
-rails importmap:node:install[tieeeeen1994/app-modal]
 
 # Full HTTPS URL
-rails importmap:node:install[https://github.com/tieeeeen1994/app-modal]
-
-# Specific branch, tag, or commit
-rails importmap:node:install[tieeeeen1994/app-modal#main]
-
-# Explicit prefix variants
-rails importmap:node:install[github:tieeeeen1994/app-modal]
-rails importmap:node:install[git+https://github.com/tieeeeen1994/app-modal]
+rails importmap:node:install[app-modal@https://github.com/tieeeeen1994/app-modal]
 ```
-
-The real package name is automatically resolved from the repository's `package.json` after Yarn installs it.
 
 ### Install a local package
 
