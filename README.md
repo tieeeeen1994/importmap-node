@@ -1,4 +1,4 @@
-# importmap-node
+# Importmap Node
 
 A Rails gem that bridges **Yarn** package management with Rails' [importmap](https://github.com/rails/importmap-rails) asset pipeline. Install npm packages via Yarn, automatically vendor the compiled JS entry point into `vendor/javascript/`, and add a `pin` to `config/importmap.rb` — all in one command.
 
