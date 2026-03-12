@@ -8,7 +8,7 @@ No bundler (webpack, esbuild, etc.) required.
 
 - Ruby >= 3.1
 - Rails >= 7.0
-- [Yarn](https://yarnpkg.com/) available on `$PATH`
+- [Yarn 4](https://yarnpkg.com/) available on `$PATH`
 - An existing `config/importmap.rb` (i.e. your app already uses `importmap-rails`)
 
 ## Installation
@@ -43,12 +43,20 @@ This will:
 
 ### Install from a Git repository
 
-You can install packages directly from GitHub or any Git URL:
+You can install packages directly from GitHub or any Git URL using any Yarn 4 supported syntax.
 
 ```sh
-
-# Full HTTPS URL
+# HTTPS URL
 rails importmap:node:install[app-modal@https://github.com/tieeeeen1994/app-modal]
+
+# GitHub shorthand
+rails importmap:node:install[app-modal@github:tieeeeen1994/app-modal]
+
+# GitLab shorthand
+rails importmap:node:install[app-modal@gitlab:tieeeeen1994/app-modal]
+
+# Bitbucket shorthand
+rails importmap:node:install[app-modal@bitbucket:tieeeeen1994/app-modal]
 ```
 
 ### Install a local package
