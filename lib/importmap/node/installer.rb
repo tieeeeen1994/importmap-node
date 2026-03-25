@@ -82,12 +82,13 @@ module Importmap
       end
 
       def yarn_up_dependencies
-        pkg_json = @root.join('package.json')
-        deps     = JSON.parse(pkg_json.read).fetch('dependencies', {}).keys
-        return if deps.empty?
+        # Use the tracked specs from importmap_node.json so that repo packages
+        # are upgraded with their full "name@url" spec rather than just the name.
+        specs = load_packages
+        return if specs.empty?
 
-        puts "Running: yarn up #{deps.join(' ')}"
-        system("yarn up #{deps.join(' ')}", chdir: @root.to_s) or raise 'yarn up failed'
+        puts "Running: yarn up #{specs.join(' ')}"
+        system("yarn up #{specs.join(' ')}", chdir: @root.to_s) or raise 'yarn up failed'
       end
 
       def repo_url?(package)
