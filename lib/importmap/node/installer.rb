@@ -93,8 +93,18 @@ module Importmap
       def repo_url?(package)
         return false if package.start_with?('file:')
 
-        package.match?(%r{\Ahttps?://|\Agit[+:]|\Agithub:|\Abitbucket:|\Agitlab:}) ||
-          (!package.start_with?('@') && package.include?('/'))
+        spec = spec_part(package)
+        spec.match?(%r{\Ahttps?://|\Agit[+:]|\Agithub:|\Abitbucket:|\Agitlab:}) ||
+          (!spec.start_with?('@') && spec.include?('/'))
+      end
+
+      # Returns the URL/spec portion of a Yarn 4 "name@url" argument.
+      # Scoped packages starting with "@" are returned unchanged.
+      def spec_part(package)
+        return package if package.start_with?('@')
+
+        idx = package.index('@')
+        idx ? package[(idx + 1)..] : package
       end
 
       def current_dependencies
@@ -114,7 +124,14 @@ module Importmap
 
       def resolve_package_name(package)
         return local_package_name(package) if package.start_with?('file:')
-        return repo_package_name(package) if repo_url?(package)
+
+        if repo_url?(package)
+          unless package.start_with?('@')
+            idx = package.index('@')
+            return package[0, idx] if idx
+          end
+          return repo_package_name(package)
+        end
 
         package
       end
